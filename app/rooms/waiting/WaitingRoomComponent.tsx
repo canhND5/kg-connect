@@ -1,7 +1,6 @@
 "use client";
 
 import { decodePassphrase, generateRoomId } from "@/lib/client-utils";
-import { DebugMode } from "@/lib/Debug";
 import { ConnectionDetails } from "@/lib/types";
 import {
   LiveKitRoom,
@@ -9,7 +8,7 @@ import {
   AudioConference,
   StartAudio,
 } from "@livekit/components-react";
-import { Button, Modal } from "antd";
+import { Modal, notification } from "antd";
 import {
   ExternalE2EEKeyProvider,
   RoomOptions,
@@ -85,6 +84,8 @@ export function WaitingRoomComponent(props: {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
+  const [notify, contextHolder] = notification.useNotification();
+
   const participantDataReceive = (
     payload: Uint8Array,
     participant?: RemoteParticipant
@@ -93,24 +94,22 @@ export function WaitingRoomComponent(props: {
     const { type, roomId } = JSON.parse(strData);
     if (type == "REQUEST_CONNECT") {
       console.log("REQUEST_CONNECT: ", strData);
-      // const isAcceptConnect = confirm(
-      //   participant?.name + " want to connect to you: \n " + roomId
-      // );
 
+      setRequestParticipant(participant);
+      setRequestRoomId(roomId);
       setIsOpenModal(true);
 
-      // if (isAcceptConnect) {
-      //   console.log("accept:", participant);
-      //   console.log("room:", room);
-      //   acceptConnect(roomId, participant?.identity);
-      // }
       return;
     }
 
     if (type == "ACCEPT_CONNECT") {
       console.log("ACCEPT_CONNECT: ", strData);
-      alert(`${participant?.name} accepted your connect request!! `);
-      router.push(`/rooms/${roomId}`);
+      notify.open({
+        message: `${participant?.name} accepted your connect request!! `,
+        duration: 0,
+      });
+      setTimeout(() => router.push(`/rooms/${roomId}`), 1000);
+
       return;
     }
   };
@@ -204,9 +203,13 @@ export function WaitingRoomComponent(props: {
     );
   }, []);
 
+  const [requestParticipant, setRequestParticipant] = useState<
+    Participant | undefined
+  >(undefined);
+  const [requestRoomId, setRequestRoomId] = useState("");
   const [isOpenModal, setIsOpenModal] = useState(false);
   const handleOk = () => {
-    console.log("handleOk");
+    acceptConnect(requestRoomId, requestParticipant?.identity || "");
     setIsOpenModal(false);
   };
 
@@ -216,6 +219,7 @@ export function WaitingRoomComponent(props: {
   };
   return (
     <>
+      {contextHolder}
       <Modal
         open={isOpenModal}
         title="Title"
@@ -223,12 +227,13 @@ export function WaitingRoomComponent(props: {
         onCancel={handleCancel}
         footer={(_, { OkBtn, CancelBtn }) => (
           <>
-            <Button>Custom Button</Button>
             <CancelBtn />
             <OkBtn />
           </>
         )}
-      ></Modal>
+      >
+        {requestParticipant?.name} want to connect to you?
+      </Modal>
       <div>
         <h3>
           Participants in Room:{" "}
