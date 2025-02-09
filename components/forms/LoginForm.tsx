@@ -13,6 +13,9 @@ function LoginForm() {
   const router = useRouter();
 
   const onFinish: FormProps<FieldType>["onFinish"] = (values) => {
+    if (values.username) {
+      localStorage.setItem("username", values.username);
+    }
     console.log("Success:", values);
     router.push("/rooms/waiting");
   };

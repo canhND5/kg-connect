@@ -18,7 +18,34 @@ export function PageClientImpl(props: {
 }) {
   const [preJoinChoices, setPreJoinChoices] = React.useState<
     LocalUserChoices | undefined
-  >(undefined);
+  >({
+    username: localStorage.getItem("username") ?? "username-not-found",
+    videoEnabled: false,
+    videoDeviceId: "xx",
+    audioEnabled: false,
+    audioDeviceId: "communications",
+  });
+
+  useEffect(() => {
+    const getConnectionInfo = async () => {
+      const url = new URL(CONN_DETAILS_ENDPOINT, window.location.origin);
+      url.searchParams.append("roomName", "waiting"); // props.roomName);
+      url.searchParams.append(
+        "participantName",
+        localStorage.getItem("username") ?? "canh"
+      );
+      if (props.region) {
+        url.searchParams.append("region", props.region);
+      }
+      const connectionDetailsResp = await fetch(url.toString());
+      const connectionDetailsData = await connectionDetailsResp.json();
+
+      console.log("connectionDetailsData: ", connectionDetailsData);
+      setConnectionDetails(connectionDetailsData);
+    };
+
+    getConnectionInfo();
+  }, []);
 
   const preJoinDefaults = React.useMemo(() => {
     return {
@@ -34,10 +61,11 @@ export function PageClientImpl(props: {
 
   const handlePreJoinSubmit = React.useCallback(
     async (values: LocalUserChoices) => {
-      values.videoEnabled = false;
-      setPreJoinChoices(values);
+      // values.videoEnabled = false;
+      console.log("LocalUserChoices: ", preJoinChoices);
+      /// setPreJoinChoices(values);
       const url = new URL(CONN_DETAILS_ENDPOINT, window.location.origin);
-      url.searchParams.append("roomName", props.roomName);
+      url.searchParams.append("roomName", "waiting"); // props.roomName);
       url.searchParams.append("participantName", values.username);
       if (props.region) {
         url.searchParams.append("region", props.region);
@@ -58,7 +86,8 @@ export function PageClientImpl(props: {
 
   const [role, setRole] = useState("");
   return (
-    <main data-lk-theme="default" style={{ height: "100%", width: "100%" }}>
+    <main data-lk-theme="default">
+      {/* style={{ height: "100%", width: "100%" }} */}
       {connectionDetails === undefined || preJoinChoices === undefined ? (
         <div
           style={{

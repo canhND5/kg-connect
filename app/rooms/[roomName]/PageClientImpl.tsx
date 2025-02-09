@@ -2,13 +2,16 @@
 
 import { decodePassphrase } from "@/lib/client-utils";
 import { DebugMode } from "@/lib/Debug";
+import { SettingsMenu } from "@/lib/SettingsMenu";
 import { ConnectionDetails } from "@/lib/types";
 import {
   LiveKitRoom,
   LocalUserChoices,
   PreJoin,
   AudioConference,
+  VideoConference,
   StartAudio,
+  formatChatMessageLinks,
 } from "@livekit/components-react";
 import {
   ExternalE2EEKeyProvider,
@@ -71,7 +74,8 @@ export function PageClientImpl(props: {
   );
 
   return (
-    <main data-lk-theme="default" style={{ height: "100%", width: "100%" }}>
+    <main data-lk-theme="default">
+      {/* style={{ height: "100%", width: "100%" }} */}
       {connectionDetails === undefined || preJoinChoices === undefined ? (
         <div
           style={{
@@ -215,12 +219,12 @@ function VideoConferenceComponent(props: {
         onError={handleError}
       >
         <StartAudio label="Click to allow audio playback" />
-        {/* <VideoConference
+        <VideoConference
           chatMessageFormatter={formatChatMessageLinks}
           SettingsComponent={SHOW_SETTINGS_MENU ? SettingsMenu : undefined}
           // SettingsComponent={SettingsMenu}
-        ></VideoConference> */}
-        <AudioConference />
+        ></VideoConference>
+        {/* <AudioConference /> */}
         {/* <DebugMode /> */}
         {/* <RecordingIndicator /> */}
       </LiveKitRoom>

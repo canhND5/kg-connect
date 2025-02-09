@@ -1,7 +1,9 @@
 "use client";
 
+import ChatSection from "@/components/ChatSection/ChatSection";
 import { decodePassphrase, generateRoomId } from "@/lib/client-utils";
 import { ConnectionDetails } from "@/lib/types";
+import { acceptConnect, denyConnect } from "@/stores/waitingRoom";
 import {
   LiveKitRoom,
   LocalUserChoices,
@@ -81,7 +83,14 @@ export function WaitingRoomComponent(props: {
   }, [props.userChoices, props.options.hq, props.options.codec]);
 
   const room = React.useMemo(() => new Room(roomOptions), []);
-  const encoder = new TextEncoder();
+  console.log("room: ", room);
+  const participant = room.localParticipant;
+  participant.metadata = JSON.stringify({
+    role: "moderator",
+    customField: "yourCustomData",
+  });
+
+  // const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
   const [notify, contextHolder] = notification.useNotification();
@@ -104,7 +113,7 @@ export function WaitingRoomComponent(props: {
 
     if (type == "ACCEPT_CONNECT") {
       console.log("ACCEPT_CONNECT: ", strData);
-      notify.open({
+      notify.success({
         message: `${participant?.name} accepted your connect request!! `,
         duration: 0,
       });
@@ -112,27 +121,51 @@ export function WaitingRoomComponent(props: {
 
       return;
     }
+
+    if (type == "DENY_CONNECT") {
+      console.log("DENY_CONNECT: ", strData);
+      notify.warning({
+        message: `${participant?.name} deny your connect request!! `,
+        duration: 0,
+      });
+
+      return;
+    }
   };
 
-  const acceptConnect = async (roomId: string, participantIdentity: string) => {
-    const data = {
-      type: "ACCEPT_CONNECT",
-      roomId,
-    };
-    await room.localParticipant.publishData(
-      new TextEncoder().encode(JSON.stringify(data)),
-      {
-        reliable: true,
-        destinationIdentities: [participantIdentity],
-      }
-    );
-    router.push(`/rooms/${roomId}`);
-  };
+  // const denyConnect = async (roomId: string, participantIdentity: string) => {
+  //   const data = {
+  //     type: "DENY_CONNECT",
+  //     roomId,
+  //   };
+  //   await room.localParticipant.publishData(
+  //     new TextEncoder().encode(JSON.stringify(data)),
+  //     {
+  //       reliable: true,
+  //       destinationIdentities: [participantIdentity],
+  //     }
+  //   );
+  // };
+
+  // const acceptConnect = async (roomId: string, participantIdentity: string) => {
+  //   const data = {
+  //     type: "ACCEPT_CONNECT",
+  //     roomId,
+  //   };
+  //   await room.localParticipant.publishData(
+  //     new TextEncoder().encode(JSON.stringify(data)),
+  //     {
+  //       reliable: true,
+  //       destinationIdentities: [participantIdentity],
+  //     }
+  //   );
+  //   router.push(`/rooms/${roomId}`);
+  // };
 
   const updateParticipants = () => {
     // Bao gồm cả local participant và remote participants
     const allParticipants = [
-      room.localParticipant,
+      // room.localParticipant,
       ...Array.from(room.remoteParticipants.values()),
     ];
     console.log("allParticipants: ", allParticipants);
@@ -209,14 +242,17 @@ export function WaitingRoomComponent(props: {
   const [requestRoomId, setRequestRoomId] = useState("");
   const [isOpenModal, setIsOpenModal] = useState(false);
   const handleOk = () => {
-    acceptConnect(requestRoomId, requestParticipant?.identity || "");
+    acceptConnect(room, requestRoomId, requestParticipant?.identity || "");
     setIsOpenModal(false);
   };
 
   const handleCancel = () => {
-    console.log("handleCancel");
+    denyConnect(room, requestRoomId, requestParticipant?.identity || "");
     setIsOpenModal(false);
   };
+
+  const [openChat, setOpenChat] = useState<boolean>(false);
+  const [sendToUsername, setSendToUsername] = useState("");
   return (
     <>
       {contextHolder}
@@ -236,12 +272,13 @@ export function WaitingRoomComponent(props: {
       </Modal>
       <div>
         <h3>
-          Participants in Room:{" "}
+          Participants in Room:
           <button onClick={updateParticipants}>Refresh</button>
         </h3>
         <ul>
           {participants.map((p) => (
             <li key={p.name}>
+              {p.name + " "}
               <button
                 onClick={() => {
                   const data = {
@@ -257,7 +294,16 @@ export function WaitingRoomComponent(props: {
                   );
                 }}
               >
-                {p.name} {p.isSpeaking ? "🎤" : ""}
+                {"📞"}
+              </button>
+              /
+              <button
+                onClick={() => {
+                  setOpenChat(!openChat);
+                  setSendToUsername(p.identity);
+                }}
+              >
+                {"📝"}
               </button>
             </li>
           ))}
@@ -281,6 +327,11 @@ export function WaitingRoomComponent(props: {
         {/* <DebugMode /> */}
         {/* <RecordingIndicator /> */}
       </LiveKitRoom>
+      <ChatSection
+        open={openChat}
+        sendTo={sendToUsername}
+        onclose={() => setOpenChat(false)}
+      />
     </>
   );
 }

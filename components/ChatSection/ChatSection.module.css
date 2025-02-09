@@ -1,0 +1,8 @@
+.closeIcon{
+    float: right;
+    cursor: 'pointer';
+}
+
+.closeIcon:hover{
+    font-size: large;
+}
